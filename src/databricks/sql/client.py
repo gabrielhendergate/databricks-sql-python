@@ -1,7 +1,10 @@
 from typing import Dict, Tuple, List, Optional, Any, Union
 
 import pandas
-import pyarrow
+try:
+    import pyarrow
+except ImportError:
+    pyarrow = None
 import requests
 import json
 import os
@@ -24,6 +27,12 @@ logger = logging.getLogger(__name__)
 DEFAULT_RESULT_BUFFER_SIZE_BYTES = 104857600
 DEFAULT_ARRAY_SIZE = 100000
 
+if pyarrow is None:
+    logger.warning(
+        "[WARN] pyarrow is not installed by default in fork databricks-sql-connector 2.9.3cp1,"
+        "any arrow specific api (e.g. fetchmany_arrow) and cloud fetch will be disabled."
+        "If you need these features, please run pip install pyarrow or pip install databricks-sql-connector[pyarrow] to install"
+    )
 
 class Connection:
     def __init__(
@@ -707,14 +716,14 @@ class Cursor:
         else:
             raise Error("There is no active result set")
 
-    def fetchall_arrow(self) -> pyarrow.Table:
+    def fetchall_arrow(self) -> "pyarrow.Table":
         self._check_not_closed()
         if self.active_result_set:
             return self.active_result_set.fetchall_arrow()
         else:
             raise Error("There is no active result set")
 
-    def fetchmany_arrow(self, size) -> pyarrow.Table:
+    def fetchmany_arrow(self, size) -> "pyarrow.Table":
         self._check_not_closed()
         if self.active_result_set:
             return self.active_result_set.fetchmany_arrow(size)
@@ -888,7 +897,7 @@ class ResultSet:
     def rownumber(self):
         return self._next_row_index
 
-    def fetchmany_arrow(self, size: int) -> pyarrow.Table:
+    def fetchmany_arrow(self, size: int) -> "pyarrow.Table":
         """
         Fetch the next set of rows of a query result, returning a PyArrow table.
 
@@ -913,7 +922,7 @@ class ResultSet:
 
         return results
 
-    def fetchall_arrow(self) -> pyarrow.Table:
+    def fetchall_arrow(self) -> "pyarrow.Table":
         """Fetch all (remaining) rows of a query result, returning them as a PyArrow table."""
         results = self.results.remaining_rows()
         self._next_row_index += results.num_rows
